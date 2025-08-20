@@ -1,5 +1,10 @@
 # author: zainab ahsan
-# last updated: 2025-08-13
+# last updated: 2025-08-20
+
+# TO-DO:
+# - at the end of the script, rename previous timesheet with the date and store in
+#   an archive folder. make updated timesheet the previous one.
+# - save changes to the same, shared excel sheet not csv file
 
 import pandas as pd
 import os
@@ -8,7 +13,6 @@ class Timesheet:
     CURRENT_FILE = "timesheet_updated.csv"     # current/updated timesheet
     PREVIOUS_FILE = "timesheet_previous.csv"   # previous previous
 
-    @staticmethod
     def load_timesheets():
         # load current file
         if not os.path.exists(Timesheet.CURRENT_FILE):
@@ -26,23 +30,16 @@ class Timesheet:
         return Timesheet.index_dfs(current_df, previous_df)
     
     def check_updates(current_df, previous_df):
-        # check for added rows/courses
         added_rows = current_df.loc[~current_df.index.isin(previous_df.index)]
-        # check for removed rows/courses
         removed_rows = previous_df.loc[~previous_df.index.isin(current_df.index)]
-        # check for updated rows/courses
         common_index = current_df.index.intersection(previous_df.index)
         
-        # Align columns before comparing to handle added/removed columns
         previous_df_aligned, current_df_aligned = previous_df.align(current_df, join='inner', axis=1)
-        
         diffs = current_df_aligned.loc[common_index].compare(previous_df_aligned.loc[common_index], result_names=('new', 'old'))
         
         if not diffs.empty:
-            # Reshape the diffs DataFrame to be more readable
             updated_rows = diffs.stack(level=0).reset_index()
             updated_rows.rename(columns={'level_2': 'Field', 'new': 'New Value', 'old': 'Old Value'}, inplace=True)
-            # Reorder columns for clarity
             updated_rows = updated_rows[['Division', 'Course + Section', 'Field', 'Old Value', 'New Value']]
         else:
             updated_rows = pd.DataFrame(columns=['Division', 'Course + Section', 'Field', 'Old Value', 'New Value'])
@@ -55,7 +52,6 @@ class Timesheet:
         previous_df.set_index(index_cols, inplace=True)
         return current_df, previous_df
 
-    @staticmethod
     def main():
         current_df, previous_df = Timesheet.load_timesheets()
         added, removed, updated = Timesheet.check_updates(current_df, previous_df)
